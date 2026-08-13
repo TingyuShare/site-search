@@ -1,0 +1,127 @@
+/* ============================================================
+   SiteSearch — Google-style minimal search home styles
+   Auto-adapts to system dark mode (prefers-color-scheme)
+   ============================================================ */
+
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #202124;
+  --muted: #70757a;
+  --border: #dfe1e5;
+  --shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
+  --hover-bg: rgba(60, 64, 67, 0.1);
+  --blue: #4285f4;
+  --red: #ea4335;
+  --yellow: #fbbc05;
+  --green: #34a853;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #202124;
+    --fg: #e8eaed;
+    --muted: #9aa0a6;
+    --border: #5f6368;
+    --shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+    --hover-bg: rgba(232, 234, 237, 0.12);
+  }
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  font-family: Arial, Helvetica, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  transition: background 0.2s ease, color 0.2s ease;
+  padding: 20px;
+}
+
+/* ---------------- Main (centered vertically and horizontally) ---------------- */
+.main {
+  width: 100%;
+  max-width: 584px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.logo {
+  font-family: Arial, sans-serif;
+  font-size: clamp(56px, 12vw, 88px);
+  font-weight: 500;
+  letter-spacing: -4px;
+  line-height: 1.15;
+  margin-bottom: 36px;
+  user-select: none;
+}
+
+.c-blue { color: var(--blue); }
+.c-red { color: var(--red); }
+.c-yellow { color: var(--yellow); }
+.c-green { color: var(--green); }
+
+/* ---------------- Search box ---------------- */
+.search-form {
+  width: 100%;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 46px;
+  padding: 0 10px 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--bg);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.search-box:hover {
+  box-shadow: var(--shadow);
+  border-color: transparent;
+}
+
+.search-box:focus-within {
+  box-shadow: var(--shadow);
+  border-color: transparent;
+}
+
+.search-icon {
+  color: var(--muted);
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.search-box input {
+  flex: 1;
+  height: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--fg);
+  font-size: 16px;
+  min-width: 0;
+}
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 560px) {
+  .logo {
+    margin-bottom: 28px;
+  }
+}

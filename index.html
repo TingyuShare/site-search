@@ -1,0 +1,38 @@
+<!-- ============================================================
+     SiteSearch — minimal search home
+     Auto-selects a search engine by IP: Bing in China, Google elsewhere
+     ============================================================ -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="SiteSearch — a minimal search home that auto-selects a search engine by IP (Bing in China / Google abroad)" />
+  <title>SiteSearch</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='21' cy='24' r='13' fill='none' stroke='%234285F4' stroke-width='6'/%3E%3Cline x1='31' y1='34' x2='41' y2='44' stroke='%2334A853' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="main">
+    <h1 class="logo" aria-label="SiteSearch">
+      <span class="c-blue">S</span><span class="c-red">i</span><span class="c-yellow">t</span>
+      <span class="c-blue">e</span><span class="c-green">S</span><span class="c-red">e</span>
+      <span class="c-blue">a</span><span class="c-yellow">r</span><span class="c-green">c</span>
+      <span class="c-red">h</span>
+    </h1>
+
+    <form class="search-form" id="search-form" action="javascript:void(0)" role="search">
+      <div class="search-box">
+        <svg class="search-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+          <path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"/>
+        </svg>
+        <input id="search-input" type="text" name="q" autocomplete="off"
+               autocapitalize="off" spellcheck="false" maxlength="2048"
+               aria-label="Search" />
+      </div>
+    </form>
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
