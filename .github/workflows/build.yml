@@ -48,6 +48,10 @@ jobs:
             git checkout -b dev
           fi
           
+          # Remove all files except the deployable ones
+          find . -maxdepth 1 -type f ! -name 'index.html' ! -name 'style.min.css' ! -name 'app.min.js' ! -name 'server.js' -delete
+          rm -rf css js scripts node_modules .github .gitignore package.json package-lock.json
+          
           # Check if there are changes
           if git diff --quiet; then
             echo "No changes to commit"
