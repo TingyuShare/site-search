@@ -29,11 +29,10 @@ jobs:
       - name: Build (minify)
         run: npm run build
 
-      - name: Copy dist to project root
+      - name: Save dist files
         run: |
-          # Copy dist files to project root (before switching branches)
-          rm -rf css js index.html
-          cp -r dist/* .
+          # Save dist files to a temporary location before switching branches
+          tar czf /tmp/dist.tar.gz dist/
 
       - name: Commit and push to dev
         run: |
@@ -45,9 +44,12 @@ jobs:
           git rm -rf .
           git clean -fd
           
-          # Copy minified files from dist
+          # Restore dist files from temporary location
+          tar xzf /tmp/dist.tar.gz -C .
+          
+          # Copy minified files to project root
           cp -r dist/* .
-          rm -rf dist
+          rm -rf dist /tmp/dist.tar.gz
           
           # Commit and push
           git add -A
