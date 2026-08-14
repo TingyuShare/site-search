@@ -468,6 +468,12 @@
 
     bindEvents();
 
+    // Auto-search if query parameter is present
+    if (paramQuery) {
+      goSearch(paramQuery);
+      return;
+    }
+
     if (cached) {
       // Cache hit: pick the engine from the cached region first,
       // then verify the real IP in the background.
