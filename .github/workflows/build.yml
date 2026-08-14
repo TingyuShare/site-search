@@ -44,8 +44,6 @@ jobs:
           else
             git checkout -b dev
           fi
-            git checkout -b dev
-          fi
           
           # Check if there are changes
           if git diff --quiet; then
