@@ -11,7 +11,7 @@ const terser = require('terser');
 
 const ROOT = __dirname;
 const SRC_DIR = path.join(ROOT, '..');
-const DIST_DIR = path.join(ROOT, 'dist');
+const DIST_DIR = path.join(SRC_DIR, 'dist')
 
 // Ensure dist directory exists
 if (!fs.existsSync(DIST_DIR)) {
