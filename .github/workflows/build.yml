@@ -34,7 +34,6 @@ jobs:
           # Copy dist files to project root (before switching branches)
           rm -rf css js index.html
           cp -r dist/* .
-          rm -rf dist
 
       - name: Commit and push to dev
         run: |
@@ -47,7 +46,6 @@ jobs:
           
           # Copy minified files from dist
           cp -r dist/* .
-          rm -rf dist
           
           # Check if there are files to commit
           if git ls-files --error-unmatch index.html style.min.css app.min.js server.js 2>/dev/null | grep -q .; then
