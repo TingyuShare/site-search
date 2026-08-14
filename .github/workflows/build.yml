@@ -43,15 +43,13 @@ jobs:
           # Create orphan dev branch (no history)
           git checkout --orphan dev
           git rm -rf .
+          git clean -fd
           
           # Copy minified files from dist
           cp -r dist/* .
+          rm -rf dist
           
-          # Check if there are files to commit
-          if git ls-files --error-unmatch index.html style.min.css app.min.js server.js 2>/dev/null | grep -q .; then
-            git add -A
-            git commit -m "chore: minify static files [ci skip]"
-            git push --force origin dev
-          else
-            echo "No files to commit"
-          fi
+          # Commit and push
+          git add -A
+          git commit -m "chore: minify static files [ci skip]"
+          git push --force origin dev
