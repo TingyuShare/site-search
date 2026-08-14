@@ -1,0 +1,14 @@
+{
+  "name": "SiteSearch Minify & Deploy",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/minify.js",
+    "dev": "node server.js"
+  },
+  "devDependencies": {
+    "html-minifier-terser": "^7.2.0",
+    "cssnano": "^7.0.6",
+    "postcss": "^8.4.47",
+    "terser": "^5.37.0"
+  }
+}

@@ -1,0 +1,54 @@
+name: Build & Deploy to Dev
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (minify)
+        run: npm run build
+
+      - name: Commit and push to dev
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          
+          # Create dev branch from main if it doesn't exist
+          if git show-ref --verify --quiet refs/heads/dev; then
+            git checkout dev
+            git pull origin dev
+          else
+            git checkout -b dev
+          fi
+          
+          # Copy dist files to project root
+          rm -rf css js index.html
+          cp -r dist/* .
+          rm -rf dist
+          
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
+          git add -A
+          git commit -m "chore: minify static files [ci skip]"
+          git push origin dev
