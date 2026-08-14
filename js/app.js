@@ -30,6 +30,7 @@
   const K_GEO = 'ss.geo';          // cache: {country, ip, ts}, ip used for real-time comparison
   const K_LANG = 'ss.lang';
   const K_SITES = 'ss.sites';      // custom sites: [{name, domain}]
+  const K_ROUTES = 'ss.routes';    // custom routes: {name: urlTemplate}
   const GEO_TTL = 6 * 60 * 60 * 1000; // 6 hours
   const PROVIDER_TIMEOUT = 5000;
 
@@ -83,6 +84,12 @@
     suggestions: document.getElementById('suggestions'),
     bulkImportInput: document.getElementById('bulk-import-input'),
     bulkImportBtn: document.getElementById('bulk-import-btn'),
+    routesList: document.getElementById('routes-list'),
+    routeNameInput: document.getElementById('route-name-input'),
+    routeUrlInput: document.getElementById('route-url-input'),
+    routeAddBtn: document.getElementById('route-add-btn'),
+    routesBulkImportInput: document.getElementById('routes-bulk-import-input'),
+    routesBulkImportBtn: document.getElementById('routes-bulk-import-btn'),
   };
 
   /* ---------------- Custom Sites ---------------- */
@@ -142,6 +149,61 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /* ---------------- Custom Routes ---------------- */
+  function getRoutes() {
+    try {
+      const raw = safeLocal.get(K_ROUTES);
+      if (raw) return JSON.parse(raw);
+    } catch { /* ignore */ }
+    return {};
+  }
+
+  function saveRoutes(routes) {
+    safeLocal.set(K_ROUTES, JSON.stringify(routes));
+  }
+
+  function normalizeRouteUrl(url) {
+    return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  }
+
+  function addRoute(name, url) {
+    const routes = getRoutes();
+    const normalizedName = name.trim().toLowerCase();
+    const normalizedUrl = normalizeRouteUrl(url.trim());
+    routes[normalizedName] = normalizedUrl;
+    saveRoutes(routes);
+    renderRoutesList();
+  }
+
+  function removeRoute(name) {
+    const routes = getRoutes();
+    delete routes[name.toLowerCase()];
+    saveRoutes(routes);
+    renderRoutesList();
+  }
+
+  function renderRoutesList() {
+    const routes = getRoutes();
+    const routeNames = Object.keys(routes);
+    if (routeNames.length === 0) {
+      els.routesList.innerHTML = '<div class="routes-empty">No routes configured</div>';
+      return;
+    }
+    els.routesList.innerHTML = routeNames.map(name => `
+      <div class="route-item" data-name="${escapeHtml(name)}">
+        <div class="route-item-info">
+          <div class="route-item-name">${escapeHtml(name)}</div>
+          <div class="route-item-url">${escapeHtml(routes[name])}</div>
+        </div>
+        <button class="route-delete-btn" data-name="${escapeHtml(name)}" aria-label="Delete route ${escapeHtml(name)}">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+          </svg>
+        </button>
+      </div>
+    `).join('');
   }
 
   /* ---------------- Suggestions ---------------- */
@@ -255,6 +317,36 @@
     const q = (query || '').trim();
     if (!q) return;
 
+    // Check for route matching: first word matches a route key
+    const firstWord = q.match(/^(\S+)/);
+    if (firstWord) {
+      const routeName = firstWord[1].toLowerCase();
+      const routes = getRoutes();
+      if (routes[routeName]) {
+        // Find the corresponding site domain
+        const sites = getCustomSites();
+        const site = sites.find(s => s.name.toLowerCase() === routeName);
+        if (site) {
+          // Append site:domain to the end of the query
+          const modifiedQuery = `${q} site:${site.domain}`;
+          const routeUrl = routes[routeName];
+          // If route URL contains %s, replace it with the query
+          if (routeUrl.includes('%s')) {
+            const searchUrl = routeUrl.replace('%s', encodeURIComponent(modifiedQuery));
+            location.href = searchUrl;
+          } else {
+            // Use route URL as base and add query parameter
+            const def = ENGINES[engine];
+            const finalUrl = routeUrl.startsWith('/') ? new URL(routeUrl, def.search).href : routeUrl;
+            const url = new URL(finalUrl);
+            url.searchParams.set('q', modifiedQuery);
+            location.href = url.toString();
+          }
+          return;
+        }
+      }
+    }
+
     // Check for site: prefix (handle both "site:domain" and "site:domain query")
     const siteMatch = q.match(/^site:(\S+)(?:\s+(.*))?$/);
     if (siteMatch) {
@@ -283,6 +375,7 @@
       e.stopPropagation();
       els.sitesPanel.classList.toggle('hidden');
       renderSitesList();
+      renderRoutesList();
     });
 
     // Bulk import
@@ -337,6 +430,78 @@
     els.bulkImportInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         els.bulkImportBtn.click();
+      }
+    });
+
+    // Route add button
+    els.routeAddBtn.addEventListener('click', () => {
+      const name = els.routeNameInput.value.trim();
+      const url = els.routeUrlInput.value.trim();
+      if (name && url) {
+        addRoute(name, url);
+        els.routeNameInput.value = '';
+        els.routeUrlInput.value = '';
+      }
+    });
+
+    // Route add on Enter
+    els.routeUrlInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        els.routeAddBtn.click();
+      }
+    });
+
+    // Route delete (delegation)
+    els.routesList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.route-delete-btn');
+      if (btn) {
+        const name = btn.dataset.name;
+        removeRoute(name);
+      }
+    });
+
+    // Routes bulk import
+    els.routesBulkImportBtn.addEventListener('click', () => {
+      const text = els.routesBulkImportInput.value.trim();
+      if (!text) return;
+      
+      const lines = text.split(/\n/).filter(line => line.trim());
+      let imported = 0;
+      let errors = 0;
+      let duplicates = 0;
+      
+      for (const line of lines) {
+        const colonIndex = line.indexOf(':');
+        if (colonIndex > 0) {
+          const name = line.substring(0, colonIndex).trim();
+          const url = line.substring(colonIndex + 1).trim();
+          if (name && url) {
+            const routes = getRoutes();
+            const normalizedName = name.toLowerCase();
+            if (routes[normalizedName]) {
+              duplicates++;
+            } else {
+              addRoute(name, url);
+              imported++;
+            }
+          } else {
+            errors++;
+          }
+        } else {
+          errors++;
+        }
+      }
+      
+      els.routesBulkImportInput.value = '';
+      
+      if (imported > 0 || duplicates > 0) {
+        renderRoutesList();
+        let msg = `Successfully imported ${imported} route(s)`;
+        if (duplicates > 0) msg += `, ${duplicates} already exist`;
+        if (errors > 0) msg += `, ${errors} format error(s)`;
+        alert(msg);
+      } else if (errors > 0) {
+        alert(`Import failed: All lines have format errors. Please use Name:URL format`);
       }
     });
 
