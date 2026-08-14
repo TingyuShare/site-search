@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  packages: write
 
 jobs:
   build-and-deploy:
@@ -40,24 +42,19 @@ jobs:
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           
-          # Create dev branch from main if it doesn't exist
-          if git show-ref --verify --quiet refs/heads/dev; then
-            git checkout dev
-            git pull origin dev
+          # Create orphan dev branch (no history)
+          git checkout --orphan dev
+          git rm -rf .
+          
+          # Copy minified files from dist
+          cp -r dist/* .
+          rm -rf dist
+          
+          # Check if there are files to commit
+          if git ls-files --error-unmatch index.html style.min.css app.min.js server.js 2>/dev/null | grep -q .; then
+            git add -A
+            git commit -m "chore: minify static files [ci skip]"
+            git push --force origin dev
           else
-            git checkout -b dev
+            echo "No files to commit"
           fi
-          
-          # Remove all files except the deployable ones
-          find . -maxdepth 1 -type f ! -name 'index.html' ! -name 'style.min.css' ! -name 'app.min.js' ! -name 'server.js' -delete
-          rm -rf css js scripts node_modules .github .gitignore package.json package-lock.json
-          
-          # Check if there are changes
-          if git diff --quiet; then
-            echo "No changes to commit"
-            exit 0
-          fi
-          
-          git add -A
-          git commit -m "chore: minify static files [ci skip]"
-          git push origin dev
