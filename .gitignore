@@ -3,8 +3,3 @@ dist/
 *.min.js
 *.min.css
 .DS_Store
-node_modules/
-dist/
-*.min.js
-*.min.css
-.DS_Store
