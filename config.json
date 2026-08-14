@@ -1,0 +1,8 @@
+{
+  "sites": {
+    "github": "github.com",
+    "aws": "aws.amazon.com",
+    "stackoverflow": "stackoverflow.com"
+  },
+  "defaultEngine": "google"
+}
