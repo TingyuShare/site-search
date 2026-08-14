@@ -76,14 +76,13 @@
   const els = {
     form: document.getElementById('search-form'),
     input: document.getElementById('search-input'),
-    settingsBtn: document.getElementById('settings-btn'),
+    settingsBtn: document.getElementById('settings-btn-fixed'),
     sitesPanel: document.getElementById('sites-panel'),
     sitesClose: document.getElementById('sites-close'),
     sitesList: document.getElementById('sites-list'),
-    siteNameInput: document.getElementById('site-name-input'),
-    siteDomainInput: document.getElementById('site-domain-input'),
-    siteAddBtn: document.getElementById('site-add-btn'),
     suggestions: document.getElementById('suggestions'),
+    bulkImportInput: document.getElementById('bulk-import-input'),
+    bulkImportBtn: document.getElementById('bulk-import-btn'),
   };
 
   /* ---------------- Custom Sites ---------------- */
@@ -104,11 +103,11 @@
     // Check if domain already exists
     const normalizedDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '').toLowerCase();
     const existing = sites.find(s => s.domain.toLowerCase() === normalizedDomain);
-    if (existing) return false;
+    if (existing) return 'duplicate';
     sites.push({ name: name.trim(), domain: normalizedDomain });
     saveCustomSites(sites);
     renderSitesList();
-    return true;
+    return 'added';
   }
 
   function removeCustomSite(domain) {
@@ -121,7 +120,7 @@
   function renderSitesList() {
     const sites = getCustomSites();
     if (sites.length === 0) {
-      els.sitesList.innerHTML = '<div class="sites-empty">还没有添加自定义站点</div>';
+      els.sitesList.innerHTML = '<div class="sites-empty">No custom sites added yet</div>';
       return;
     }
     els.sitesList.innerHTML = sites.map(site => `
@@ -130,7 +129,7 @@
           <div class="site-item-name">${escapeHtml(site.name)}</div>
           <div class="site-item-domain">${escapeHtml(site.domain)}</div>
         </div>
-        <button class="site-delete-btn" data-domain="${escapeHtml(site.domain)}" aria-label="删除 ${escapeHtml(site.name)}">
+        <button class="site-delete-btn" data-domain="${escapeHtml(site.domain)}" aria-label="Delete ${escapeHtml(site.name)}">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
           </svg>
@@ -160,10 +159,13 @@
       return;
     }
 
-    // Filter sites by name or domain
+    // Filter sites by name or domain (match any word in query)
+    const queryWords = query.toLowerCase().split(/\s+/);
     const filtered = sites.filter(s =>
-      s.name.toLowerCase().includes(query.toLowerCase()) ||
-      s.domain.toLowerCase().includes(query.toLowerCase())
+      queryWords.some(word =>
+        s.name.toLowerCase().includes(word) ||
+        s.domain.toLowerCase().includes(word)
+      )
     );
 
     if (filtered.length === 0) {
@@ -283,29 +285,64 @@
       renderSitesList();
     });
 
+    // Bulk import
+    els.bulkImportBtn.addEventListener('click', () => {
+      const text = els.bulkImportInput.value.trim();
+      if (!text) return;
+      
+      const lines = text.split(/\n/).filter(line => line.trim());
+      let imported = 0;
+      let errors = 0;
+      let duplicates = 0;
+      
+      for (const line of lines) {
+        const parts = line.split(':');
+        if (parts.length >= 2) {
+          const name = parts[0].trim();
+          const domain = parts.slice(1).join(':').trim();
+          if (name && domain) {
+            const normalizedDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+            const result = addCustomSite(name, normalizedDomain);
+            if (result === 'added') {
+              imported++;
+            } else if (result === 'duplicate') {
+              duplicates++;
+            } else {
+              errors++;
+            }
+          } else {
+            errors++;
+          }
+        } else {
+          errors++;
+        }
+      }
+      
+      // Clear input after import
+      els.bulkImportInput.value = '';
+      
+      // Show feedback
+      if (imported > 0 || duplicates > 0) {
+        renderSitesList();
+        let msg = `Successfully imported ${imported} site(s)`;
+        if (duplicates > 0) msg += `, ${duplicates} already exist`;
+        if (errors > 0) msg += `, ${errors} format error(s)`;
+        alert(msg);
+      } else if (errors > 0) {
+        alert(`Import failed: All lines have format errors. Please use Name:Domain format`);
+      }
+    });
+
+    // Enter key in bulk import textarea
+    els.bulkImportInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        els.bulkImportBtn.click();
+      }
+    });
+
     // Close sites panel
     els.sitesClose.addEventListener('click', () => {
       els.sitesPanel.classList.add('hidden');
-    });
-
-    // Add site
-    els.siteAddBtn.addEventListener('click', () => {
-      const name = els.siteNameInput.value.trim();
-      const domain = els.siteDomainInput.value.trim();
-      if (!name || !domain) return;
-      // Remove protocol if present
-      const normalizedDomain = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-      if (addCustomSite(name, normalizedDomain)) {
-        els.siteNameInput.value = '';
-        els.siteDomainInput.value = '';
-      }
-    });
-
-    // Enter key in add form
-    els.siteDomainInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        els.siteAddBtn.click();
-      }
     });
 
     // Delete site (delegation)
@@ -323,8 +360,19 @@
       if (item) {
         const site = item.dataset.site;
         const query = item.dataset.query;
-        // Add site: prefix to query
-        const newQuery = query ? `site:${site} ${query}` : `site:${site}`;
+        // Find the last matching word and replace it with site:domain
+        const words = query.split(/\s+/);
+        let replaced = false;
+        for (let i = words.length - 1; i >= 0; i--) {
+          const word = words[i];
+          if (word.toLowerCase().includes(site.toLowerCase()) ||
+            site.toLowerCase().includes(word.toLowerCase())) {
+            words[i] = `site:${site}`;
+            replaced = true;
+            break;
+          }
+        }
+        const newQuery = replaced ? words.join(' ') : (query ? `site:${site} ${query}` : `site:${site}`);
         els.input.value = newQuery;
         hideSuggestions();
         goSearch(newQuery);
