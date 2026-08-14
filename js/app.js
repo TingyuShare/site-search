@@ -154,7 +154,7 @@
     }
 
     // Check for site: prefix
-    const siteMatch = query.match(/^site:(\S+)\s+(.*)$/);
+    const siteMatch = query.match(/^site:(\S+)(?:\s+(.*))?$/);
     if (siteMatch) {
       hideSuggestions();
       return;
@@ -253,11 +253,11 @@
     const q = (query || '').trim();
     if (!q) return;
 
-    // Check for site: prefix
-    const siteMatch = q.match(/^site:(\S+)\s+(.*)$/);
+    // Check for site: prefix (handle both "site:domain" and "site:domain query")
+    const siteMatch = q.match(/^site:(\S+)(?:\s+(.*))?$/);
     if (siteMatch) {
       const domain = siteMatch[1];
-      const searchQuery = siteMatch[2];
+      const searchQuery = siteMatch[2] || '';
       const def = ENGINES[engine];
       const siteQuery = searchQuery ? `${searchQuery} site:${domain}` : `site:${domain}`;
       location.href = def.search + '?' + new URLSearchParams({ q: siteQuery }).toString();
