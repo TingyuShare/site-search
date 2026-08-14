@@ -1,8 +1,8 @@
-name: Build & Deploy to Dev
+name: Build & Deploy to Main
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
   workflow_dispatch:  # 允许手动触发
 
 permissions:
@@ -34,13 +34,13 @@ jobs:
           # Save dist files to a temporary location before switching branches
           tar czf /tmp/dist.tar.gz dist/
 
-      - name: Commit and push to dev
+      - name: Commit and push to main
         run: |
           git config --global user.name "GitHub Actions"
           git config --global user.email "actions@github.com"
           
-          # Create orphan dev branch (no history)
-          git checkout --orphan dev
+          # Create orphan main branch (no history)
+          git checkout --orphan main
           git rm -rf .
           git clean -fd
           
@@ -54,4 +54,4 @@ jobs:
           # Commit and push
           git add -A
           git commit -m "chore: minify static files [ci skip]"
-          git push --force origin dev
+          git push --force origin main
