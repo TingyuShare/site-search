@@ -25,6 +25,13 @@ jobs:
       - name: Build (minify)
         run: npm run build
 
+      - name: Copy dist to project root
+        run: |
+          # Copy dist files to project root (before switching branches)
+          rm -rf css js index.html
+          cp -r dist/* .
+          rm -rf dist
+
       - name: Commit and push to dev
         run: |
           git config --global user.name "GitHub Actions"
@@ -37,11 +44,8 @@ jobs:
           else
             git checkout -b dev
           fi
-          
-          # Copy dist files to project root
-          rm -rf css js index.html
-          cp -r dist/* .
-          rm -rf dist
+            git checkout -b dev
+          fi
           
           # Check if there are changes
           if git diff --quiet; then
