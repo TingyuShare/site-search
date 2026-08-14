@@ -62,27 +62,6 @@
         <textarea id="bulk-import-input" class="bulk-import-textarea" placeholder="git:github.com&#10;aws:aws.amazon.com&#10;stackoverflow:stackoverflow.com"></textarea>
         <button id="bulk-import-btn" class="bulk-import-btn">Import All Sites</button>
       </div>
-      <div class="sites-divider"></div>
-      <div class="routes-section">
-        <div class="routes-header">
-          <span class="routes-title">Route Analysis</span>
-          <span class="routes-hint">Format: RouteName:URL with %s placeholder</span>
-        </div>
-        <div id="routes-list" class="routes-list"></div>
-        <div class="routes-add-form">
-          <input id="route-name-input" class="route-input" type="text" placeholder="Route name (e.g., github)" />
-          <input id="route-url-input" class="route-input" type="text" placeholder="URL template (e.g., /search?q=%s)" />
-          <button id="route-add-btn" class="route-add-btn">Add Route</button>
-        </div>
-        <div class="routes-bulk-import">
-          <div class="routes-bulk-import-header">
-            <span class="routes-bulk-import-title">Bulk Import Routes</span>
-            <span class="routes-bulk-import-hint">Format per line: Name:URL</span>
-          </div>
-          <textarea id="routes-bulk-import-input" class="bulk-import-textarea" placeholder="github:/search?q=%s&#10;stackoverflow:/search/site=%s"></textarea>
-          <button id="routes-bulk-import-btn" class="bulk-import-btn">Import All Routes</button>
-        </div>
-      </div>
     </div>
   </main>
 
