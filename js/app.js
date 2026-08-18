@@ -360,13 +360,13 @@
       if (item) {
         const site = item.dataset.site;
         const query = item.dataset.query;
-        // Find the last matching word and replace it with site:domain
+        // Replace the FIRST word in the query with site:domain (full match only)
         const words = query.split(/\s+/);
         let replaced = false;
-        for (let i = words.length - 1; i >= 0; i--) {
+        for (let i = 0; i < words.length; i++) {
           const word = words[i];
-          if (word.toLowerCase().includes(site.toLowerCase()) ||
-            site.toLowerCase().includes(word.toLowerCase())) {
+          // Exact (case-insensitive) match between the word and the site domain
+          if (word.toLowerCase() === site.toLowerCase()) {
             words[i] = `site:${site}`;
             replaced = true;
             break;
