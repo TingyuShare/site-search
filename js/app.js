@@ -266,6 +266,20 @@
       return;
     }
 
+    // Check if first word matches a configured custom site
+    const sites = getCustomSites();
+    const words = q.split(/\s+/);
+    const firstWord = words[0];
+    if (firstWord) {
+      const matchedSite = sites.find(s => s.name.toLowerCase() === firstWord.toLowerCase());
+      if (matchedSite) {
+        const def = ENGINES[engine];
+        const newQuery = `${q} site:${matchedSite.domain}`;
+        location.href = def.search + '?' + new URLSearchParams({ q: newQuery }).toString();
+        return;
+      }
+    }
+
     const def = ENGINES[engine];
     location.href = def.search + '?' + new URLSearchParams({ q }).toString();
   }
