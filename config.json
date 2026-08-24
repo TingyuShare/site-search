@@ -4,5 +4,5 @@
     "aws": "aws.amazon.com",
     "stackoverflow": "stackoverflow.com"
   },
-  "defaultEngine": "google"
+  "defaultEngine": "bing"
 }
