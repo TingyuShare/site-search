@@ -3,9 +3,8 @@
  *
  * Features:
  *   1. Minimal search home: a logo + a search box
- *   2. Detect country/region via free IP geolocation APIs
- *      - China (CN)      -> use Bing search (bing.com/search)
- *      - Other regions   -> use Google search (google.com/search)
+ *   2. Configurable default search engine (Google / Bing),
+ *      chosen as a single option in the Custom Sites panel
  *   3. URL params: ?q=keyword &engine=google|bing &lang=zh|en
  * ============================================================ */
 
@@ -24,47 +23,14 @@
     },
   };
 
-  const DEFAULT_ENGINE = 'google'; // default for non-China regions
-  const CN_ENGINE = 'bing';        // default for China
+  const DEFAULT_ENGINE = 'google';
 
-  const K_GEO = 'ss.geo';          // cache: {country, ip, ts}, ip used for real-time comparison
+  const K_ENGINE = 'ss.engine';    // selected default search engine
   const K_LANG = 'ss.lang';
   const K_SITES = 'ss.sites';      // custom sites: [{name, domain}]
-  const GEO_TTL = 6 * 60 * 60 * 1000; // 6 hours
-  const PROVIDER_TIMEOUT = 5000;
-
-  /**
-   * IP geolocation providers (tried in order as fallbacks).
-   * All are free, CORS-enabled APIs that need no API key.
-   * Each returns: ip (current public egress IP) + country (region code).
-   */
-  const GEO_PROVIDERS = [
-    {
-      name: 'ipapi.co',
-      url: 'https://ipapi.co/json/',
-      parse: (d) => (typeof d.country_code === 'string'
-        ? { country: d.country_code.toUpperCase(), ip: typeof d.ip === 'string' ? d.ip : null }
-        : null),
-    },
-    {
-      name: 'ip-api.com',
-      url: 'https://ip-api.com/json/?fields=status,countryCode,query',
-      parse: (d) => (d && d.status === 'success' && typeof d.countryCode === 'string'
-        ? { country: d.countryCode.toUpperCase(), ip: typeof d.query === 'string' ? d.query : null }
-        : null),
-    },
-    {
-      name: 'ipwho.is',
-      url: 'https://ipwho.is/',
-      parse: (d) => (d && d.success !== false && typeof d.country_code === 'string'
-        ? { country: d.country_code.toUpperCase(), ip: typeof d.ip === 'string' ? d.ip : null }
-        : null),
-    },
-  ];
 
   /* ---------------- State ---------------- */
   let engine = DEFAULT_ENGINE; // currently active engine
-  let country = null;          // country code, e.g. CN
   let lang = 'zh';
 
   const qs = new URLSearchParams(location.search);
@@ -83,6 +49,7 @@
     suggestions: document.getElementById('suggestions'),
     bulkImportInput: document.getElementById('bulk-import-input'),
     bulkImportBtn: document.getElementById('bulk-import-btn'),
+    engineSelect: document.getElementById('engine-selector'),
   };
 
   /* ---------------- Custom Sites ---------------- */
@@ -203,47 +170,27 @@
     },
   };
 
-  /* ---------------- Geolocation ---------------- */
-  /** Read a valid cache entry {country, ip, ts}; null if missing/expired */
-  function cachedGeo() {
-    try {
-      const raw = JSON.parse(safeLocal.get(K_GEO) || 'null');
-      if (raw && raw.country && Date.now() - raw.ts < GEO_TTL) return raw;
-    } catch { /* ignore */ }
-    return null;
+  /* ---------------- Default Search Engine ---------------- */
+  /** Resolve the active engine: URL param > localStorage selection > default */
+  function resolveEngine() {
+    if (paramEngine && ENGINES[paramEngine]) return paramEngine;
+    const stored = safeLocal.get(K_ENGINE);
+    if (stored && ENGINES[stored]) return stored;
+    return DEFAULT_ENGINE;
   }
 
-  /**
-   * Fetch the current public egress IP and its region in real time.
-   * Returns {country, ip}; on success, stores the "IP -> region"
-   * mapping into the 6-hour cache.
-   */
-  async function fetchGeo() {
-    for (const p of GEO_PROVIDERS) {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), PROVIDER_TIMEOUT);
-      try {
-        const res = await fetch(p.url, { signal: ctrl.signal });
-        if (!res.ok) continue;
-        const data = await res.json();
-        const geo = p.parse(data);
-        if (geo && geo.country) {
-          safeLocal.set(K_GEO, JSON.stringify({
-            country: geo.country,
-            ip: geo.ip || null,
-            ts: Date.now(),
-          }));
-          return geo;
-        }
-      } catch { /* try next provider */ }
-      finally {
-        clearTimeout(timer);
-      }
-    }
-    return null;
+  function renderEngineSelector() {
+    els.engineSelect.querySelectorAll('input[name="default-engine"]').forEach((radio) => {
+      radio.checked = radio.value === engine;
+    });
   }
 
-  const engineForCountry = (c) => (c === 'CN' ? CN_ENGINE : DEFAULT_ENGINE);
+  function setEngine(value) {
+    if (!ENGINES[value]) return;
+    engine = value;
+    safeLocal.set(K_ENGINE, value);
+    renderEngineSelector();
+  }
 
   /* ---------------- Render (sync page language only) ---------------- */
   function render() {
@@ -297,6 +244,7 @@
       e.stopPropagation();
       els.sitesPanel.classList.toggle('hidden');
       renderSitesList();
+      renderEngineSelector();
     });
 
     // Bulk import
@@ -357,6 +305,13 @@
     // Close sites panel
     els.sitesClose.addEventListener('click', () => {
       els.sitesPanel.classList.add('hidden');
+    });
+
+    // Default search engine selection
+    els.engineSelect.addEventListener('change', (e) => {
+      if (e.target.name === 'default-engine') {
+        setEngine(e.target.value);
+      }
     });
 
     // Delete site (delegation)
@@ -464,19 +419,15 @@
   }
 
   /* ---------------- Init ---------------- */
-  async function init() {
+  function init() {
     // 1. Language: URL param > localStorage > default zh
     const storedLang = safeLocal.get(K_LANG);
     lang = paramLang === 'zh' || paramLang === 'en' ? paramLang : storedLang === 'en' ? 'en' : 'zh';
     safeLocal.set(K_LANG, lang);
     render();
 
-    // 2. Engine: URL param > geolocation cache > default
-    const cached = cachedGeo();
-    const c = cached ? cached.country : null;
-    engine = paramEngine && ENGINES[paramEngine]
-      ? paramEngine
-      : (c ? engineForCountry(c) : DEFAULT_ENGINE);
+    // 2. Engine: URL param > localStorage selection > default
+    engine = resolveEngine();
 
     if (paramQuery) els.input.value = paramQuery;
 
@@ -485,33 +436,6 @@
     // Auto-search if query parameter is present
     if (paramQuery) {
       goSearch(paramQuery);
-      return;
-    }
-
-    if (cached) {
-      // Cache hit: pick the engine from the cached region first,
-      // then verify the real IP in the background.
-      country = c;
-      if (!paramEngine) engine = engineForCountry(c);
-
-      const geo = await fetchGeo();
-      if (geo) {
-        const ipUnchanged = cached.ip && cached.ip === geo.ip;
-        if (!ipUnchanged) {
-          // IP changed (VPN toggle / route switch) -> re-locate with live result
-          country = geo.country;
-          if (!paramEngine) engine = engineForCountry(country);
-        }
-        // IP unchanged: keep the cached region
-      }
-      // Verification failed: keep the cached region
-    } else {
-      // No cache: locate asynchronously
-      const geo = await fetchGeo();
-      country = geo ? geo.country : null;
-      if (!paramEngine && country) {
-        engine = engineForCountry(country);
-      }
     }
   }
 
